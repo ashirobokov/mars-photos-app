@@ -22,7 +22,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import ru.training.marsphotos.network.MarsApi
-import ru.training.marsphotos.network.MarsApiService
+import ru.training.marsphotos.network.MarsPhoto
+
+enum class MarsApiStatus() {
+    LOADING,
+    ERROR,
+    DONE
+}
 
 /**
  * The [ViewModel] that is attached to the [OverviewFragment].
@@ -30,10 +36,16 @@ import ru.training.marsphotos.network.MarsApiService
 class OverviewViewModel : ViewModel() {
 
     // The internal MutableLiveData that stores the status of the most recent request
-    private val _status = MutableLiveData<String>()
+    private val _status = MutableLiveData<MarsApiStatus>()
 
     // The external immutable LiveData for the request status
-    val status: LiveData<String> = _status
+    val status: LiveData<MarsApiStatus> = _status
+
+    private val _photos = MutableLiveData<List<MarsPhoto>>()
+
+    // The external immutable LiveData for the list of Mars photos
+    val photos: LiveData<List<MarsPhoto>> = _photos
+
     /**
      * Call getMarsPhotos() on init so we can display status immediately.
      */
@@ -46,12 +58,14 @@ class OverviewViewModel : ViewModel() {
      * [MarsPhoto] [List] [LiveData].
      */
     private fun getMarsPhotos() {
+        _status.value = MarsApiStatus.LOADING
         viewModelScope.launch {
             try {
-                val listResult = MarsApi.retrofitService.GetPhotos()
-                _status.value = "Success. ${listResult.size} photos retrieved"
+                _photos.value = MarsApi.retrofitService.GetPhotos()
+                _status.value = MarsApiStatus.DONE
             } catch (e: Exception) {
-                _status.value = "Failture: ${e.message}"
+                _status.value = MarsApiStatus.ERROR
+                _photos.value = listOf()
             }
         }
     }
